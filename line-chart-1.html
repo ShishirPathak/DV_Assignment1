@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Line Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+      svg {
+        width: 1500px;
+        height: 700px;
+        background-color: #f5f5f5;
+        margin-left: 250px;
+      }
+
+      .chart-grid-line  {
+        stroke: lightgray;
+        stroke-dasharray: 4;
+      }
+
+      .chart-tick-text {
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .chart-chart-grid-line  {
+        stroke: lightgray;
+        stroke-dasharray: 4;
+      }
+
+      .chart-axis-label {
+            font-size: 20px;
+            font-weight: bold;
+            font-family: sans-serif;
+            text-anchor: middle;
+     }
+
+      .tick text {
+        font-weight: bold;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      // Select the body and append the SVG element
+      const chartSvg = d3
+        .select("body")
+        .append("svg")
+        .attr("width", 1000)
+        .attr("height", 800)
+        .attr("viewBox", "0 -30 1500 1000");
+
+      // URL to fetch CSV data
+      const dataUrl =
+        "https://raw.githubusercontent.com/Prathameshmane1710/html-portfolio/main/data_sample.csv";
+
+      d3.csv(dataUrl, (row) => {
+        // Parse the data and calculate additional fields in a single step
+        const estimatedCost = +row.EstimatedCost;
+        const rawMaterial = +row.RawMaterial;
+        const workmanship = +row.Workmanship;
+        const storageCost = +row.StorageCost;
+        const actualCost = rawMaterial + workmanship + storageCost;
+        const soldPrice = estimatedCost * 1.1;
+        const profitMargin = soldPrice - actualCost;
+
+        return {
+          date: new Date(row.date), // Parse date string to Date object
+          estimatedCost: estimatedCost,
+          rawMaterial: rawMaterial,
+          workmanship: workmanship,
+          storageCost: storageCost,
+          actualCost: actualCost,
+          soldPrice: soldPrice,
+          profitMargin: profitMargin,
+        };
+      }).then((dataset) => {
+        console.table(dataset);
+        // Continue with the rest of the processing
+
+        // Set up scales for x and y axes
+        const xScale = d3
+          .scaleTime()
+          .domain(d3.extent(dataset, (d) => d.date)) // Get date range
+          .range([0, 800]); // Map to chart width
+
+        const yScale = d3
+          .scaleLinear()
+          .domain([
+            d3.min(dataset, (d) =>
+              Math.min(
+                d.estimatedCost,
+                d.actualCost,
+                d.soldPrice,
+                d.profitMargin
+              )
+            ),
+            d3.max(dataset, (d) =>
+              Math.max(
+                d.estimatedCost,
+                d.actualCost,
+                d.soldPrice,
+                d.profitMargin
+              )
+            ),
+          ])
+          .nice() // Create evenly spaced ticks
+          .range([800, 0]); // Map to chart height
+
+        // Add horizontal grid lines
+        chartSvg
+          .selectAll("hline")
+          .data(yScale.ticks(15))
+          .enter()
+          .append("line")
+          .attr("class", "chart-grid-line ")
+          .attr("x1", 0)
+          .attr("y1", (d) => yScale(d))
+          .attr("x2", 800)
+          .attr("y2", (d) => yScale(d));
+
+        // Add vertical grid lines
+        chartSvg
+          .selectAll("vline")
+          .data(xScale.ticks(15))
+          .enter()
+          .append("line")
+          .attr("class", "chart-grid-line ")
+          .attr("x1", (d) => xScale(d))
+          .attr("y1", 0)
+          .attr("x2", (d) => xScale(d))
+          .attr("y2", 800);
+
+        // Line generators for each series
+        const estimatedCostLine = d3
+          .line()
+          .x((d) => xScale(d.date))
+          .y((d) => yScale(d.estimatedCost));
+
+        const actualCostLine = d3
+          .line()
+          .x((d) => xScale(d.date))
+          .y((d) => yScale(d.actualCost));
+
+        const soldPriceLine = d3
+          .line()
+          .x((d) => xScale(d.date))
+          .y((d) => yScale(d.soldPrice));
+
+        const profitMarginLine = d3
+          .line()
+          .x((d) => xScale(d.date))
+          .y((d) => yScale(d.profitMargin));
+
+        // Color scale for lines
+        const lineColors = d3.scaleOrdinal(d3.schemeCategory10);
+
+        // Append the lines to the SVG
+        chartSvg
+          .append("path")
+          .data([dataset])
+          .attr("class", "line")
+          .attr("d", estimatedCostLine)
+          .style("stroke", lineColors(0));
+
+        chartSvg
+          .append("path")
+          .data([dataset])
+          .attr("class", "line")
+          .attr("d", actualCostLine)
+          .style("stroke", lineColors(4));
+
+        chartSvg
+          .append("path")
+          .data([dataset])
+          .attr("class", "line")
+          .attr("d", soldPriceLine)
+          .style("stroke", lineColors(7));
+
+        chartSvg
+          .append("path")
+          .data([dataset])
+          .attr("class", "line")
+          .attr("d", profitMarginLine)
+          .style("stroke", lineColors(3));
+
+        // Add transitions for smoother display
+        chartSvg
+          .selectAll(".line")
+          .attr("fill", "none")
+          .attr("stroke-width", 2)
+          .style("opacity", 0)
+          .transition()
+          .duration(1000)
+          .style("opacity", 1);
+
+        // X-axis
+        chartSvg
+          .append("g")
+          .attr("class", "x-axis")
+          .attr("transform", "translate(0, 800)")
+          .call(
+            d3
+              .axisBottom(xScale)
+              .tickValues(dataset.map((d) => d.date))
+              .tickFormat(d3.timeFormat("%b %d, %Y"))
+          )
+          .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-0.8em")
+          .attr("dy", "0.15em")
+          .attr("transform", "rotate(-65)");
+
+        chartSvg
+          .append("text")
+          .attr("class", "chart-axis-label")
+          .attr("x", 400)
+          .attr("y", 910)
+          .attr("fill", "#000")
+          .text("Date");
+
+        // Y-axis
+        chartSvg
+          .append("g")
+          .attr("class", "y-axis")
+          .call(
+            d3
+              .axisLeft(yScale)
+              .ticks((yScale.domain()[1] - yScale.domain()[0]) / 200)
+          )
+          .append("text")
+          .attr("class", "chart-axis-label")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -400)
+          .attr("y", -80)
+          .attr("dy", "0.71em")
+          .attr("fill", "#000")
+          .text("Costs");
+
+        // Add legend
+        const chartLegend = chartSvg
+          .append("g")
+          .attr("class", "legend")
+          .attr("transform", "translate(900, 50)");
+
+        const legendItems = chartLegend
+          .selectAll("g")
+          .data([
+            "Estimated Cost",
+            "Actual Cost",
+            "Sold Price",
+            "Margin of Profit",
+          ])
+          .enter()
+          .append("g")
+          .attr("transform", (d, i) => "translate(0," + i * 20 + ")");
+
+        legendItems
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", 15)
+          .attr("height", 15)
+          .style("fill", (d, i) => lineColors(i))
+          .style("stroke", "black");
+
+        legendItems
+          .append("text")
+          .attr("x", 20)
+          .attr("y", 10)
+          .style("fill", (d, i) => lineColors(i))
+          .text((d) => d);
+      });
+    </script>
+  </body>
+</html>

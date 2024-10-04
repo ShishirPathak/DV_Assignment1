@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Profit Margin with D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        table {
+            width: 90%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: center;
+            align-items: center;
+            margin-left: 70px;
+        }
+
+    .styled-table thead tr {
+        background-color: #3952b5;
+        color: #ffffff;
+        text-align: left;
+        position: sticky;
+        top: 0;
+    }
+
+    .styled-table th,
+    .styled-table td {
+        padding: 15px; 
+        margin: 0;
+        text-align: center;
+    }
+
+    .styled-table tbody tr {
+        border-bottom: 1px solid #dddddd;
+    }
+
+    .styled-table tbody tr:nth-of-type(even) {
+        background-color: #f2cfcf; 
+    }
+
+    .styled-table tbody tr:last-of-type {
+        border-bottom: 2px solid #3952b5;
+    }
+
+    .styled-table tbody tr.active-row {
+        font-weight: bold;
+        color: #009879;
+    }
+
+    .header {
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        color: #3952b5;
+        margin-bottom: 10px;
+    }
+
+    </style>
+</head>
+<body>
+        <h2 class="header">Supply Data Chain</h2> 
+
+    <table id="profitTable" class="styled-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Estimated Cost</th>
+                <th>Raw Material</th>
+                <th>Workmanship</th>
+                <th>Storage</th>
+                <th>Actual Cost</th>
+                <th>Sold Price</th>
+                <th>Margin of Profit</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <script>
+        // Fetch and process the CSV data
+        d3.csv("https://raw.githubusercontent.com/ShishirPathak/DV_Assignment1/refs/heads/main/data_sample.csv", function(d) {
+            // Convert numeric values to numbers
+            d.EstimatedCost = +d.EstimatedCost;
+            d.RawMaterial = +d.RawMaterial;
+            d.Workmanship = +d.Workmanship;
+            d.StorageCost = +d.StorageCost;
+            const date1 = new Date(d.date);
+            d.date = date1.getFullYear() + '-' + ('0' + (date1.getMonth() + 1)).slice(-2) + '-' + ('0' + date1.getDate()).slice(-2);
+
+            // Calculate Actual Cost, Sold Price, and Margin of Profit
+            d.ActualCost = d.RawMaterial + d.Workmanship + d.StorageCost;
+            d.SoldPrice = d.EstimatedCost * 1.1;
+            d.MarginOfProfit = d.SoldPrice - d.ActualCost;
+
+            return d;  // Return the modified data row
+        }).then(function(data) {
+            // Select the tbody element
+            const tbody = d3.select("#profitTable tbody");
+
+            // Append rows and populate the table
+            const rows = tbody.selectAll("tr")
+                .data(data)
+                .enter()
+                .append("tr");
+
+            // Append cells and populate them with data
+            rows.selectAll("td")
+                .data(function(row) {
+                    return [
+                        row.date,
+                        `${row.EstimatedCost.toFixed(2)}`,
+                        `${row.RawMaterial.toFixed(2)}`,
+                        `${row.Workmanship.toFixed(2)}`,
+                        `${row.StorageCost.toFixed(2)}`,
+                        `${row.ActualCost.toFixed(2)}`,
+                        `${row.SoldPrice.toFixed(2)}`,
+                        `${row.MarginOfProfit.toFixed(2)}`
+                    ];
+                })
+                .enter()
+                .append("td")
+                .text(function(d) { return d; });
+        }).catch(function(error) {
+            console.error("Error loading the CSV data: ", error);
+        });
+    </script>
+</body>
+</html>
